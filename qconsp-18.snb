@@ -1,0 +1,307 @@
+{
+  "metadata" : {
+    "name" : "qconsp-2018-v2",
+    "user_save_timestamp" : "1969-12-31T21:00:00.000Z",
+    "auto_save_timestamp" : "0022-10-06T21:00:00.000Z",
+    "language_info" : {
+      "name" : "scala",
+      "file_extension" : "scala",
+      "codemirror_mode" : "text/x-scala"
+    },
+    "trusted" : true,
+    "customLocalRepo" : null,
+    "customRepos" : null,
+    "customDeps" : [ ],
+    "customImports" : null,
+    "customArgs" : null,
+    "customSparkConf" : null
+  },
+  "cells" : [ {
+    "metadata" : {
+      "id" : "B9E39EE453B04D58B130E7828C328526"
+    },
+    "cell_type" : "markdown",
+    "source" : "#QConSP 2018\n\n###Eiti Kimura, Movile/Wavy, Brasil\n\n**Apresentação para QConSP com o título: Analisador de dados Automatizado utilizando Machine Learning**\n\nEm 11/05/2018 - 12:05-12:55\nSala: Edith Clarke\n\nTodo exemplo de código foi escrito em Scala."
+  }, {
+    "metadata" : {
+      "trusted" : true,
+      "input_collapsed" : false,
+      "collapsed" : false,
+      "id" : "DFB1F6025E204206865849B701C6F23F"
+    },
+    "cell_type" : "code",
+    "source" : "import org.apache.spark.ml.Pipeline\nimport org.apache.spark.ml.PipelineModel\nimport org.apache.spark.ml.evaluation.RegressionEvaluator\nimport org.apache.spark.ml.feature.VectorAssembler\nimport org.apache.spark.ml.regression.DecisionTreeRegressionModel\nimport org.apache.spark.ml.regression.DecisionTreeRegressor\nimport org.apache.spark.ml.tuning.{ParamGridBuilder, TrainValidationSplit}\nimport org.apache.spark.ml.tuning.TrainValidationSplitModel\n\nimport org.apache.spark.ml.feature.VectorAssembler\nimport org.apache.spark.mllib.tree.model.DecisionTreeModel\n\nimport resource._",
+    "outputs" : [ ]
+  }, {
+    "metadata" : {
+      "id" : "04478C53A29A45698A744BC81129A3CD"
+    },
+    "cell_type" : "markdown",
+    "source" : "##Passo 1 - Leitura dos dados\n\nOs processos podem ser verificados via interface do Spark: http://localhost:4040/jobs/\n\nPara fins demonstrativos, a leitura dos dados já foi pré-consolidada sendo gerado um dataframe, para simplificar o processo.\n\nO processo todo consistiu em exportar os dados dos ultimos 2 meses para CSV e carregar esse arquivo no Spark."
+  }, {
+    "metadata" : {
+      "trusted" : true,
+      "input_collapsed" : false,
+      "collapsed" : false,
+      "id" : "44F9504B37D74EE382D056F71EC5351E"
+    },
+    "cell_type" : "code",
+    "source" : "val ROOT = \"./notebooks/qconsp-2018\"\n\n//spark notebook already provide me a sparkSession object, ready to use\nval rawDataFrame = sparkSession.read.load(ROOT + \"/sbs-dataframe\")\n                               .withColumn(\"successful_charges_log\", log($\"successful_charges\"))\n\nval targetColName  = \"successful_charges_log\"\nval featuresColName = \"features_success\"\nval predictionColName = \"prediction_log\"\n\nrawDataFrame\n.select(s\"carrier_id\", s\"successful_charges\", s\"no_credit\", s\"errors\", s\"total_attempts\")\n.show(5)",
+    "outputs" : [ ]
+  }, {
+    "metadata" : {
+      "id" : "34C78C140036453AAF65B200B42C125B"
+    },
+    "cell_type" : "markdown",
+    "source" : "##Passo 2 - Seleção de features para treinamento\n\nNesse passo ocorre a separação dos dados para treinamento."
+  }, {
+    "metadata" : {
+      "trusted" : true,
+      "input_collapsed" : false,
+      "collapsed" : false,
+      "id" : "33E7FA6C30D944799DE74C6470B164BF"
+    },
+    "cell_type" : "code",
+    "source" : "val featureCols = Array(\"hour_of_day\", \"week_of_month\", \"avg_response_time\",\"no_credit\", \"errors\", \"total_attempts\")\nval vectorAssembler = new VectorAssembler()\n                                .setInputCols(featureCols)\n                                .setOutputCol(featuresColName)\n\nvar Array(trainingData, testData) = rawDataFrame.randomSplit(Array(0.8, 0.2), seed = 42)\n\nval preparedTestData = vectorAssembler.transform(testData)\nval preparedTrainingData = vectorAssembler.transform(rawDataFrame)",
+    "outputs" : [ ]
+  }, {
+    "metadata" : {
+      "id" : "964DFCF55A8147A4B950392934BE1414"
+    },
+    "cell_type" : "markdown",
+    "source" : "## Passo 3 - Experimentando com modelos de Regressão Linear\n\nNesse ponto, utilizamos o modelo de Regressão Linear do Spark testando apenas o uso de diferentes regularizadores.\nAqui os modelos são instanciados utilizando-se o Elastic Net, Lasso e Ridge regression."
+  }, {
+    "metadata" : {
+      "trusted" : true,
+      "input_collapsed" : false,
+      "collapsed" : false,
+      "id" : "B2B1129527844415B9787A1369EA6359"
+    },
+    "cell_type" : "code",
+    "source" : "import org.apache.spark.ml.regression.LinearRegression\n\n// ElasticNet mixing parameter For alpha = 0 the penalty is an L2 penalty (Ridge), for alpha = 1 it is an L1 penalty (Lasso), for 0 < alpha < 1 the penalty is a combination of L1 and L2 (Elastic Net)\nval lrLasso = new LinearRegression()\n  .setMaxIter(100)\n  .setRegParam(0.5) \n  .setElasticNetParam(1) // LASSO\n  .setLabelCol(targetColName) \n  .setFeaturesCol(featuresColName)\n  .setTol(10)\n  .setPredictionCol(predictionColName)\n\nval lrRidge = new LinearRegression()\n  .setMaxIter(100)\n  .setRegParam(0.5)\n  .setElasticNetParam(0) // RIDGE\n  .setLabelCol(targetColName) \n  .setFeaturesCol(featuresColName)\n  .setTol(10)\n  .setPredictionCol(predictionColName)\n\nval lrElasticNet = new LinearRegression()\n  .setMaxIter(1000)\n  .setRegParam(0.005)\n  .setElasticNetParam(0.2) // ELASTIC NET\n  .setLabelCol(targetColName) \n  .setFeaturesCol(featuresColName)\n  .setTol(10)\n  .setPredictionCol(predictionColName)",
+    "outputs" : [ ]
+  }, {
+    "metadata" : {
+      "id" : "FABA1F4CDB7247A6960FF0DEB1ED8EBF"
+    },
+    "cell_type" : "markdown",
+    "source" : "## Passo 3.1 - Treinamento dos Modelos Lineares"
+  }, {
+    "metadata" : {
+      "trusted" : true,
+      "input_collapsed" : false,
+      "collapsed" : false,
+      "id" : "60FC9F1D27F34DE18A9FCB165F775381"
+    },
+    "cell_type" : "code",
+    "source" : "//fitting the model\nval lassoModel = lrLasso.fit(preparedTrainingData)\nval ridgeModel = lrRidge.fit(preparedTrainingData)\nval elasticNetModel = lrElasticNet.fit(preparedTrainingData)\n\n// summarize the model over the training set and print out some metrics\nval summaryLassoModel = lassoModel.summary\nval summaryRidgeModel = ridgeModel.summary\nval summaryElasticNetModel = elasticNetModel.summary",
+    "outputs" : [ ]
+  }, {
+    "metadata" : {
+      "id" : "2FDD41CCF8934A488DD7F1B7FB87C612"
+    },
+    "cell_type" : "markdown",
+    "source" : "##Passo 3.2 - Utilizando um algoritmo de Árvore de Decisão para Regressão\n"
+  }, {
+    "metadata" : {
+      "trusted" : true,
+      "input_collapsed" : false,
+      "collapsed" : false,
+      "id" : "B41F0C5BAE944DDC8BC7E3D68BAAA65A"
+    },
+    "cell_type" : "code",
+    "source" : "val decisionTreeAlgorithm = new DecisionTreeRegressor()\n      .setLabelCol(targetColName)\n      .setFeaturesCol(featuresColName)\n      .setPredictionCol(predictionColName)",
+    "outputs" : [ ]
+  }, {
+    "metadata" : {
+      "id" : "BDAE8309B3E049C0842A7F156AF4C6CF"
+    },
+    "cell_type" : "markdown",
+    "source" : "##Passo 4 - Configuração do Pipeline de execução\n\n  1 - extração/seleção de atributos para treinamento do modelo usando VectorAssembler\n  \n  2 - montagem do fluxo de execução com os seguintes passos: extração de atributos, algoritmo de treinamento"
+  }, {
+    "metadata" : {
+      "trusted" : true,
+      "input_collapsed" : false,
+      "collapsed" : false,
+      "id" : "C310763403DC4FAA965B8F51275D0F7B"
+    },
+    "cell_type" : "code",
+    "source" : "val pipeline = new Pipeline()\n                  .setStages(Array(vectorAssembler, decisionTreeAlgorithm))",
+    "outputs" : [ ]
+  }, {
+    "metadata" : {
+      "id" : "744D354D259F4782BECA93D5D42AA30D"
+    },
+    "cell_type" : "markdown",
+    "source" : "##Passo 4.1 - Configuração de parâmetros do modelo\n\n\nEsse passo utiliza o conceito de hyperparametrização para obter o melhor conjunto de parâmetros no treinamento. \nO critério de avaliação de desempenho do modelo adotado para esse caso é o RMSE.\n"
+  }, {
+    "metadata" : {
+      "trusted" : true,
+      "input_collapsed" : false,
+      "collapsed" : false,
+      "id" : "F5FC60DD462C4E2A85950CCB41CFCE9B"
+    },
+    "cell_type" : "code",
+    "source" : "val paramGrid = new ParamGridBuilder()\n     .addGrid(decisionTreeAlgorithm.maxDepth, Array(7, 8, 9))\n     .addGrid(decisionTreeAlgorithm.maxBins, (28 to 30).toList)\n     .build()\n\n// Select (prediction, true label) and compute test error.\nval evaluator = new RegressionEvaluator()\n     .setLabelCol(targetColName)\n     .setPredictionCol(predictionColName)\n     .setMetricName(\"rmse\")",
+    "outputs" : [ ]
+  }, {
+    "metadata" : {
+      "id" : "4AC670B73792468582D2CB09F5874313"
+    },
+    "cell_type" : "markdown",
+    "source" : "Hora de juntar todas as peças: o pipeline que é o fluxo de execução, paramgrid com a combinação de parâmetros para se utilizar no treinamento, os atributos a sererem considerados no treinamento e o critério de avaliação.\n\nO TrainValidationSplit é uma classe que vai aplicar as diferentes combinatórias de parâmetros e utilizar o critério de avaliação especificado para avaliar e retornar o modelo com menor erro após o treinamento."
+  }, {
+    "metadata" : {
+      "trusted" : true,
+      "input_collapsed" : false,
+      "collapsed" : false,
+      "id" : "C4D5D51A0A7A46BA84F8AC9E0CCF236C"
+    },
+    "cell_type" : "code",
+    "source" : "val trainValidationSplit = new TrainValidationSplit()\n     .setEstimator(pipeline)\n     .setEvaluator(evaluator)\n     .setEstimatorParamMaps(paramGrid)\n     .setSeed(42)\n     // 80% of the data will be used for training and the remaining 20% for validation.\n     .setTrainRatio(0.8)\n\ntrainValidationSplit.explainParams",
+    "outputs" : [ ]
+  }, {
+    "metadata" : {
+      "id" : "88FE030D411F4AE99F231CDDAB741450"
+    },
+    "cell_type" : "markdown",
+    "source" : "##Passo 5 - Treinamento da Árvore de Decisão"
+  }, {
+    "metadata" : {
+      "trusted" : true,
+      "input_collapsed" : false,
+      "collapsed" : false,
+      "id" : "394A6F29E21448D0BD06607CDC0A141A"
+    },
+    "cell_type" : "code",
+    "source" : "//train a model\nval model = trainValidationSplit.fit(trainingData)",
+    "outputs" : [ ]
+  }, {
+    "metadata" : {
+      "id" : "E1976D66220544908CC52E0D20C05F7D"
+    },
+    "cell_type" : "markdown",
+    "source" : "## Passo 6 - Verificando o Modelo treinado"
+  }, {
+    "metadata" : {
+      "trusted" : true,
+      "input_collapsed" : false,
+      "collapsed" : false,
+      "presentation" : {
+        "tabs_state" : "{\n  \"tab_id\": \"#tab520203358-0\"\n}",
+        "pivot_chart_state" : "{\n  \"hiddenAttributes\": [],\n  \"menuLimit\": 200,\n  \"cols\": [],\n  \"rows\": [],\n  \"vals\": [],\n  \"exclusions\": {},\n  \"inclusions\": {},\n  \"unusedAttrsVertical\": 85,\n  \"autoSortUnusedAttrs\": false,\n  \"inclusionsInfo\": {},\n  \"aggregatorName\": \"List Unique Values\",\n  \"rendererName\": \"Table\"\n}"
+      },
+      "id" : "40E5217E1DB248929E990C6CFA24DFEB"
+    },
+    "cell_type" : "code",
+    "source" : "val bestModel = model.bestModel.asInstanceOf[PipelineModel].stages(1).asInstanceOf[DecisionTreeRegressionModel]\nval rmse = model.validationMetrics.min\nprintln(s\"maxDepth: ${bestModel.getMaxDepth}, maxBins: ${bestModel.getMaxBins}, RMSE: $rmse\")\n\n// get all errors for debug purpose\n//model.getEstimatorParamMaps.zip(model.validationMetrics)",
+    "outputs" : [ ]
+  }, {
+    "metadata" : {
+      "id" : "A8B86693A0EC444D8834585BD1CB724A"
+    },
+    "cell_type" : "markdown",
+    "source" : "Dessa forma extraímos o modelo de melhor desempenho! Temos o modelo com o menor erro em mãos.\n\n**Vamos fazer o cálculo da acurácia também, para verificar a capacidade do modelo de prever os valores em questão.**"
+  }, {
+    "metadata" : {
+      "trusted" : true,
+      "input_collapsed" : false,
+      "collapsed" : false,
+      "id" : "A119697CF8814DC194C4CEC991A6682E"
+    },
+    "cell_type" : "code",
+    "source" : "// prints result of algorithm tested\ndef showMetrics(modelName: String, df: DataFrame): Unit = {\n  val calculateAcc = (expected: Double, predicted: Double) => {\n   val error = (expected - predicted) / expected\n   //println(s\"expected: $expected - pred: $predicted : $error\")\n   if (Math.abs(error) >= 0.15) 0 else 1\n  }\n\n  val calcAccuracyUDF = udf(calculateAcc)\n  val data = df.withColumn(\"result_column\", calcAccuracyUDF(df(\"successful_charges\"), df(\"prediction\")))\n  val total = data.count.toDouble\n\n  //ilter prediction that got right\n  val correct = data.filter(\"result_column = 1\").count.toDouble\n  val accuracy = (correct / total) * 100\n  print(s\"* MODEL: $modelName  ACCURACY: $accuracy%, \")\n}\n\nshowMetrics(\"Linear Regression Lasso\", summaryLassoModel.predictions.withColumn(\"prediction\", exp(predictionColName)))\nprintln(s\"RMSE: ${summaryLassoModel.rootMeanSquaredError}\")\n\nshowMetrics(\"Linear Regression Ridge\", summaryRidgeModel.predictions.withColumn(\"prediction\", exp(predictionColName)))\nprintln(s\"RMSE: ${summaryRidgeModel.rootMeanSquaredError}\")\n\nshowMetrics(\"Linear Regression Elastic Net\", summaryElasticNetModel.predictions.withColumn(\"prediction\", exp(predictionColName)))\nprintln(s\"RMSE: ${summaryElasticNetModel.rootMeanSquaredError}\")\n\nshowMetrics(\"Decision Tree With Linear Regression\", model.transform(testData).withColumn(\"prediction\", exp(predictionColName)))\nprintln(s\"maxDepth: ${bestModel.getMaxDepth}, maxBins: ${bestModel.getMaxBins}, RMSE: $rmse\")",
+    "outputs" : [ ]
+  }, {
+    "metadata" : {
+      "id" : "CE3A1F5987C44AE080578B994A94ACB1"
+    },
+    "cell_type" : "markdown",
+    "source" : "## Passo 7 - Persistência e serialização do modelo treinado"
+  }, {
+    "metadata" : {
+      "trusted" : true,
+      "input_collapsed" : false,
+      "collapsed" : false,
+      "id" : "D52D2633061E45D58EA46DE69EE56984"
+    },
+    "cell_type" : "code",
+    "source" : "bestModel.write.overwrite.save(ROOT + \"/trained-models-dataframe/success\")",
+    "outputs" : [ ]
+  }, {
+    "metadata" : {
+      "id" : "308BA40AD81E45028CD09416DE473AE3"
+    },
+    "cell_type" : "markdown",
+    "source" : "##Passo 8 - Carga do modelo treinado "
+  }, {
+    "metadata" : {
+      "trusted" : true,
+      "input_collapsed" : false,
+      "collapsed" : false,
+      "id" : "7B1B317F104145FBAA5E9655B5FA3CFC"
+    },
+    "cell_type" : "code",
+    "source" : "val trainedModel:DecisionTreeRegressionModel = DecisionTreeRegressionModel.load(ROOT + \"/trained-models-dataframe/success\")\ntrainedModel.numFeatures",
+    "outputs" : [ ]
+  }, {
+    "metadata" : {
+      "trusted" : true,
+      "input_collapsed" : false,
+      "collapsed" : false,
+      "id" : "A2004AE82A6C401A89E14C4723068620"
+    },
+    "cell_type" : "code",
+    "source" : "trainedModel.toDebugString",
+    "outputs" : [ ]
+  }, {
+    "metadata" : {
+      "id" : "3527B8545F544FE7B7D18EE52066BC47"
+    },
+    "cell_type" : "markdown",
+    "source" : "##Passo 9 - Utilizando o modelo treinado\n\nPara usar o modelo treinando, carregamos o modelo no item anterior, ele espera o mesmo conjunto de parâmetros com que foi treinado. \nA entrada para previsão do modelo é um DataFrame com as columas de atributos, sob as quais ele vai fazer a previsão, que para esse caso é o número de sucessos de tarifação dos usuários ao longo de um dia/horário/semana do mês específicos."
+  }, {
+    "metadata" : {
+      "trusted" : true,
+      "input_collapsed" : false,
+      "collapsed" : false,
+      "id" : "A0C18AD1907642E990679C6991ED69C6"
+    },
+    "cell_type" : "code",
+    "source" : "//Preparing Data Frame\nval sample = preparedTestData.select(\"successful_charges_log\", \"features_success\").limit(10)\nsample.show(false)\n",
+    "outputs" : [ ]
+  }, {
+    "metadata" : {
+      "id" : "8285BB8FB75648F1A998AC63A308D2F4"
+    },
+    "cell_type" : "markdown",
+    "source" : "Com o Dataset preparado em mãos, para fazer a previsão, executados o método `transform` do modelo treinado.\nEsse método vai pegar cada linha da coluna de features do dataframe e rodar o `predict` sob os atributos. "
+  }, {
+    "metadata" : {
+      "trusted" : true,
+      "input_collapsed" : false,
+      "collapsed" : false,
+      "id" : "C519EF821F694EB19E6F3356BA04E0F9"
+    },
+    "cell_type" : "code",
+    "source" : "// predict success values\nval predictions = trainedModel.transform(sample)\n",
+    "outputs" : [ ]
+  }, {
+    "metadata" : {
+      "id" : "F60DCD04BBC24A2D97542D922CD5D4BD"
+    },
+    "cell_type" : "markdown",
+    "source" : "Como resultado, da previsão um novo Dataset é gerado com uma nova coluna, que caso aqui é a `prediction_log` com o resultado da previsão do modelo. \n\nNessa caso temos o valor esperado, o valor previsto e o cálculo do erro entre os dois valores."
+  }, {
+    "metadata" : {
+      "trusted" : true,
+      "input_collapsed" : false,
+      "collapsed" : false,
+      "id" : "CEB16C8287444E3B89ADE2E2BF5BF6EA"
+    },
+    "cell_type" : "code",
+    "source" : "predictions\n    .select(\"successful_charges_log\", \"prediction_log\") \n    .withColumn(\"error_perc\", (($\"successful_charges_log\" - $\"prediction_log\") / $\"successful_charges_log\") * 100)\n    .show(false)",
+    "outputs" : [ ]
+  } ],
+  "nbformat" : 4
+}
