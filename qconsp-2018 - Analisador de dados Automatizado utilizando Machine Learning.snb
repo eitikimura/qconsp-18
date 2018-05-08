@@ -1,6 +1,6 @@
 {
   "metadata" : {
-    "name" : "qconsp-2018-v2",
+    "name" : "qconsp-2018 - Analisador de dados Automatizado utilizando Machine Learning",
     "user_save_timestamp" : "1969-12-31T21:00:00.000Z",
     "auto_save_timestamp" : "0022-10-06T21:00:00.000Z",
     "language_info" : {
@@ -26,7 +26,7 @@
     "metadata" : {
       "trusted" : true,
       "input_collapsed" : false,
-      "collapsed" : false,
+      "collapsed" : true,
       "id" : "DFB1F6025E204206865849B701C6F23F"
     },
     "cell_type" : "code",
@@ -42,11 +42,11 @@
     "metadata" : {
       "trusted" : true,
       "input_collapsed" : false,
-      "collapsed" : false,
+      "collapsed" : true,
       "id" : "44F9504B37D74EE382D056F71EC5351E"
     },
     "cell_type" : "code",
-    "source" : "val ROOT = \"./notebooks/qconsp-2018\"\n\n//spark notebook already provide me a sparkSession object, ready to use\nval rawDataFrame = sparkSession.read.load(ROOT + \"/sbs-dataframe\")\n                               .withColumn(\"successful_charges_log\", log($\"successful_charges\"))\n\nval targetColName  = \"successful_charges_log\"\nval featuresColName = \"features_success\"\nval predictionColName = \"prediction_log\"\n\nrawDataFrame\n.select(s\"carrier_id\", s\"successful_charges\", s\"no_credit\", s\"errors\", s\"total_attempts\")\n.show(5)",
+    "source" : "val ROOT = \"./notebooks/qconsp-18\"\n\n//spark notebook already provide me a sparkSession object, ready to use\nval rawDataFrame = sparkSession.read.load(ROOT + \"/sbs-dataframe\")\n                               .withColumn(\"successful_charges_log\", log($\"successful_charges\"))\n\nval targetColName  = \"successful_charges_log\"\nval featuresColName = \"features_success\"\nval predictionColName = \"prediction_log\"\n\nrawDataFrame\n.select(s\"carrier_id\", s\"successful_charges\", s\"no_credit\", s\"errors\", s\"total_attempts\")\n.show(5)",
     "outputs" : [ ]
   }, {
     "metadata" : {
@@ -58,7 +58,7 @@
     "metadata" : {
       "trusted" : true,
       "input_collapsed" : false,
-      "collapsed" : false,
+      "collapsed" : true,
       "id" : "33E7FA6C30D944799DE74C6470B164BF"
     },
     "cell_type" : "code",
@@ -74,7 +74,7 @@
     "metadata" : {
       "trusted" : true,
       "input_collapsed" : false,
-      "collapsed" : false,
+      "collapsed" : true,
       "id" : "B2B1129527844415B9787A1369EA6359"
     },
     "cell_type" : "code",
@@ -90,7 +90,7 @@
     "metadata" : {
       "trusted" : true,
       "input_collapsed" : false,
-      "collapsed" : false,
+      "collapsed" : true,
       "id" : "60FC9F1D27F34DE18A9FCB165F775381"
     },
     "cell_type" : "code",
@@ -106,7 +106,7 @@
     "metadata" : {
       "trusted" : true,
       "input_collapsed" : false,
-      "collapsed" : false,
+      "collapsed" : true,
       "id" : "B41F0C5BAE944DDC8BC7E3D68BAAA65A"
     },
     "cell_type" : "code",
@@ -122,7 +122,7 @@
     "metadata" : {
       "trusted" : true,
       "input_collapsed" : false,
-      "collapsed" : false,
+      "collapsed" : true,
       "id" : "C310763403DC4FAA965B8F51275D0F7B"
     },
     "cell_type" : "code",
@@ -138,7 +138,7 @@
     "metadata" : {
       "trusted" : true,
       "input_collapsed" : false,
-      "collapsed" : false,
+      "collapsed" : true,
       "id" : "F5FC60DD462C4E2A85950CCB41CFCE9B"
     },
     "cell_type" : "code",
@@ -154,7 +154,7 @@
     "metadata" : {
       "trusted" : true,
       "input_collapsed" : false,
-      "collapsed" : false,
+      "collapsed" : true,
       "id" : "C4D5D51A0A7A46BA84F8AC9E0CCF236C"
     },
     "cell_type" : "code",
@@ -170,7 +170,7 @@
     "metadata" : {
       "trusted" : true,
       "input_collapsed" : false,
-      "collapsed" : false,
+      "collapsed" : true,
       "id" : "394A6F29E21448D0BD06607CDC0A141A"
     },
     "cell_type" : "code",
@@ -186,7 +186,7 @@
     "metadata" : {
       "trusted" : true,
       "input_collapsed" : false,
-      "collapsed" : false,
+      "collapsed" : true,
       "presentation" : {
         "tabs_state" : "{\n  \"tab_id\": \"#tab520203358-0\"\n}",
         "pivot_chart_state" : "{\n  \"hiddenAttributes\": [],\n  \"menuLimit\": 200,\n  \"cols\": [],\n  \"rows\": [],\n  \"vals\": [],\n  \"exclusions\": {},\n  \"inclusions\": {},\n  \"unusedAttrsVertical\": 85,\n  \"autoSortUnusedAttrs\": false,\n  \"inclusionsInfo\": {},\n  \"aggregatorName\": \"List Unique Values\",\n  \"rendererName\": \"Table\"\n}"
@@ -206,7 +206,7 @@
     "metadata" : {
       "trusted" : true,
       "input_collapsed" : false,
-      "collapsed" : false,
+      "collapsed" : true,
       "id" : "A119697CF8814DC194C4CEC991A6682E"
     },
     "cell_type" : "code",
@@ -222,7 +222,7 @@
     "metadata" : {
       "trusted" : true,
       "input_collapsed" : false,
-      "collapsed" : false,
+      "collapsed" : true,
       "id" : "D52D2633061E45D58EA46DE69EE56984"
     },
     "cell_type" : "code",
@@ -238,7 +238,7 @@
     "metadata" : {
       "trusted" : true,
       "input_collapsed" : false,
-      "collapsed" : false,
+      "collapsed" : true,
       "id" : "7B1B317F104145FBAA5E9655B5FA3CFC"
     },
     "cell_type" : "code",
@@ -248,7 +248,7 @@
     "metadata" : {
       "trusted" : true,
       "input_collapsed" : false,
-      "collapsed" : false,
+      "collapsed" : true,
       "id" : "A2004AE82A6C401A89E14C4723068620"
     },
     "cell_type" : "code",
@@ -264,7 +264,7 @@
     "metadata" : {
       "trusted" : true,
       "input_collapsed" : false,
-      "collapsed" : false,
+      "collapsed" : true,
       "id" : "A0C18AD1907642E990679C6991ED69C6"
     },
     "cell_type" : "code",
@@ -280,7 +280,7 @@
     "metadata" : {
       "trusted" : true,
       "input_collapsed" : false,
-      "collapsed" : false,
+      "collapsed" : true,
       "id" : "C519EF821F694EB19E6F3356BA04E0F9"
     },
     "cell_type" : "code",
@@ -296,7 +296,7 @@
     "metadata" : {
       "trusted" : true,
       "input_collapsed" : false,
-      "collapsed" : false,
+      "collapsed" : true,
       "id" : "CEB16C8287444E3B89ADE2E2BF5BF6EA"
     },
     "cell_type" : "code",
